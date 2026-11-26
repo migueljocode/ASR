@@ -26,7 +26,8 @@ try {
 
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (($userPath -split ';') -notcontains $installDir) {
-        [Environment]::SetEnvironmentVariable('Path', "$userPath;$installDir", 'User')
+        $newUserPath = if ([string]::IsNullOrWhiteSpace($userPath)) { $installDir } else { "$userPath;$installDir" }
+        [Environment]::SetEnvironmentVariable('Path', $newUserPath, 'User')
     }
     if (($env:Path -split ';') -notcontains $installDir) { $env:Path = "$installDir;$env:Path" }
     Write-Host "Installed. Try: Whisper --help"
@@ -57,9 +58,9 @@ case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
   *)
     profile="$HOME/.profile"
-    case "${SHELL##*/}" in
-      bash) profile="$HOME/.bashrc" ;;
-      zsh) profile="$HOME/.zshrc" ;;
+    case "${SHELL:-}" in
+      */bash) profile="$HOME/.bashrc" ;;
+      */zsh) profile="$HOME/.zshrc" ;;
     esac
     if ! grep -Fqx 'export PATH="$HOME/.local/bin:$PATH"' "$profile" 2>/dev/null; then
       printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$profile"
