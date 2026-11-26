@@ -6,72 +6,21 @@ It can transcribe audio files to the terminal or to a text/subtitle file, and it
 
 ## Quick install
 
-These commands install the `v0.0.0` release for the current user. Windows uses PowerShell; Linux and macOS use Bash or Zsh. FFmpeg is still required for audio files, and Linux microphone capture also requires `arecord`.
+These commands download the current release and install it for the current user. Windows uses PowerShell; Linux and macOS use Bash or Zsh.
 
 **Windows (PowerShell):**
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'This release supports Windows x64 only.' }
-$version = 'v0.0.0'
-$installDir = Join-Path $env:LOCALAPPDATA 'Programs\ASR'
-$tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
-try {
-    New-Item -ItemType Directory -Force -Path $installDir, $tempDir | Out-Null
-    $archive = Join-Path $tempDir 'Whisper.zip'
-    $extractDir = Join-Path $tempDir 'extracted'
-    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/migueljocode/ASR/releases/download/$version/Whisper-win-x64.zip" -OutFile $archive
-    Expand-Archive -Path $archive -DestinationPath $extractDir
-    Copy-Item -Path (Join-Path $extractDir 'Whisper.exe') -Destination (Join-Path $installDir 'Whisper.exe') -Force
-
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if (($userPath -split ';') -notcontains $installDir) {
-        $newUserPath = if ([string]::IsNullOrWhiteSpace($userPath)) { $installDir } else { "$userPath;$installDir" }
-        [Environment]::SetEnvironmentVariable('Path', $newUserPath, 'User')
-    }
-    if (($env:Path -split ';') -notcontains $installDir) { $env:Path = "$installDir;$env:Path" }
-    Write-Host "Installed. Try: Whisper --help"
-} finally {
-    Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-}
+irm https://raw.githubusercontent.com/migueljocode/ASR/main/scripts/install.ps1 | iex
 ```
 
 **Linux and macOS (Bash or Zsh):**
 
 ```sh
-set -eu
-version=v0.0.0
-case "$(uname -s):$(uname -m)" in
-  Linux:x86_64) rid=linux-x64 ;;
-  Darwin:arm64|Darwin:aarch64) rid=osx-arm64 ;;
-  Darwin:x86_64) rid=osx-x64 ;;
-  *) echo "Unsupported platform: $(uname -s) $(uname -m)" >&2; exit 1 ;;
-esac
-tmp_dir="$(mktemp -d)"
-trap 'rm -rf "$tmp_dir"' EXIT
-curl -fsSL "https://github.com/migueljocode/ASR/releases/download/${version}/Whisper-${rid}.zip" -o "$tmp_dir/Whisper.zip"
-unzip -q "$tmp_dir/Whisper.zip" -d "$tmp_dir"
-mkdir -p "$HOME/.local/bin"
-install -m 755 "$tmp_dir/Whisper" "$HOME/.local/bin/Whisper"
-
-case ":$PATH:" in
-  *":$HOME/.local/bin:"*) ;;
-  *)
-    profile="$HOME/.profile"
-    case "${SHELL:-}" in
-      */bash) profile="$HOME/.bashrc" ;;
-      */zsh) profile="$HOME/.zshrc" ;;
-    esac
-    if ! grep -Fqx 'export PATH="$HOME/.local/bin:$PATH"' "$profile" 2>/dev/null; then
-      printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$profile"
-    fi
-    echo "Added ~/.local/bin to $profile; open a new terminal to use Whisper from PATH."
-    ;;
-esac
-echo "Installed to $HOME/.local/bin/Whisper"
+curl -fsSL https://raw.githubusercontent.com/migueljocode/ASR/main/scripts/install.sh | bash
 ```
 
-Run `Whisper --help` in a new terminal after installation.
+The installers use a per-user install location and add it to the user PATH if needed. FFmpeg is still required for audio files, and Linux microphone capture also requires `arecord`.
 
 ## Features
 
@@ -187,4 +136,4 @@ git push origin v1.0.0
 
 ## Test audio
 
-`tests/asr_samples/` contains the English, Persian, silence, and combined sample audio. `tests/songgenerator.py` can regenerate the speech samples using the `edge-tts` Python package and FFmpeg.
+`tests/fixtures/audio/` contains the English, Persian, silence, and combined sample audio. Run `python scripts/songgenerator.py` to regenerate the speech samples using the `edge-tts` Python package and FFmpeg.

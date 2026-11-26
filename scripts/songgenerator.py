@@ -1,6 +1,8 @@
 import asyncio
 import os
 import subprocess
+from pathlib import Path
+
 import edge_tts
 
 VOICES = {
@@ -23,7 +25,7 @@ async def generate_tts(output_dir: str) -> None:
 
 
 def main() -> None:
-    output_dir = "asr_samples"
+    output_dir = str(Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "audio")
     os.makedirs(output_dir, exist_ok=True)
 
     # 1. Generate Persian and English MP3 files via edge-tts
