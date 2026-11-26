@@ -4,6 +4,74 @@ ASR is a command-line speech-to-text application powered by [Whisper](https://gi
 
 It can transcribe audio files to the terminal or to a text/subtitle file, and it supports live microphone transcription on Linux.
 
+## Quick install
+
+These commands install the `v0.0.0` release for the current user. Windows uses PowerShell; Linux and macOS use Bash or Zsh. FFmpeg is still required for audio files, and Linux microphone capture also requires `arecord`.
+
+**Windows (PowerShell):**
+
+```powershell
+$ErrorActionPreference = 'Stop'
+if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'This release supports Windows x64 only.' }
+$version = 'v0.0.0'
+$installDir = Join-Path $env:LOCALAPPDATA 'Programs\ASR'
+$tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
+try {
+    New-Item -ItemType Directory -Force -Path $installDir, $tempDir | Out-Null
+    $archive = Join-Path $tempDir 'Whisper.zip'
+    $extractDir = Join-Path $tempDir 'extracted'
+    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/migueljocode/ASR/releases/download/$version/Whisper-win-x64.zip" -OutFile $archive
+    Expand-Archive -Path $archive -DestinationPath $extractDir
+    Copy-Item -Path (Join-Path $extractDir 'Whisper.exe') -Destination (Join-Path $installDir 'Whisper.exe') -Force
+
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (($userPath -split ';') -notcontains $installDir) {
+        [Environment]::SetEnvironmentVariable('Path', "$userPath;$installDir", 'User')
+    }
+    if (($env:Path -split ';') -notcontains $installDir) { $env:Path = "$installDir;$env:Path" }
+    Write-Host "Installed. Try: Whisper --help"
+} finally {
+    Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+```
+
+**Linux and macOS (Bash or Zsh):**
+
+```sh
+set -eu
+version=v0.0.0
+case "$(uname -s):$(uname -m)" in
+  Linux:x86_64) rid=linux-x64 ;;
+  Darwin:arm64|Darwin:aarch64) rid=osx-arm64 ;;
+  Darwin:x86_64) rid=osx-x64 ;;
+  *) echo "Unsupported platform: $(uname -s) $(uname -m)" >&2; exit 1 ;;
+esac
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+curl -fsSL "https://github.com/migueljocode/ASR/releases/download/${version}/Whisper-${rid}.zip" -o "$tmp_dir/Whisper.zip"
+unzip -q "$tmp_dir/Whisper.zip" -d "$tmp_dir"
+mkdir -p "$HOME/.local/bin"
+install -m 755 "$tmp_dir/Whisper" "$HOME/.local/bin/Whisper"
+
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *)
+    profile="$HOME/.profile"
+    case "${SHELL##*/}" in
+      bash) profile="$HOME/.bashrc" ;;
+      zsh) profile="$HOME/.zshrc" ;;
+    esac
+    if ! grep -Fqx 'export PATH="$HOME/.local/bin:$PATH"' "$profile" 2>/dev/null; then
+      printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$profile"
+    fi
+    echo "Added ~/.local/bin to $profile; open a new terminal to use Whisper from PATH."
+    ;;
+esac
+echo "Installed to $HOME/.local/bin/Whisper"
+```
+
+Run `Whisper --help` in a new terminal after installation.
+
 ## Features
 
 - Local speech recognition after a model has been downloaded.
@@ -13,7 +81,7 @@ It can transcribe audio files to the terminal or to a text/subtitle file, and it
 - Six downloadable models, from `tiny` to `large`, with resumable downloads.
 - Single-file, self-contained release builds for Linux x64, Windows x64, macOS x64, and macOS ARM64.
 
-## Install
+## Manual install
 
 Download and extract the archive for your platform from the [GitHub Releases](https://github.com/migueljocode/ASR/releases) page. The program executable is named `Whisper` (`Whisper.exe` on Windows).
 
