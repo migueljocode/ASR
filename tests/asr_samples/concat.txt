@@ -1,0 +1,3 @@
+file 'persian.wav'
+file 'silence.wav'
+file 'english.wav'

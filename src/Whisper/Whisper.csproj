@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Publish for the OS/CPU of the machine running `dotnet publish`; override with -r <rid>. -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</RuntimeIdentifier>
+
+    <!-- Self-contained single file; native whisper libraries are bundled and extracted on first run. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <DebuggerSupport>false</DebuggerSupport>
+    <DebugType>none</DebugType>
+    <NoWarn>$(NoWarn);IL3000;IL2104</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
+    <PackageReference Include="Whisper.net" Version="1.8.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.8.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Whisper.net names macOS folders "macos-*" instead of "osx-*". -->
+    <NativeRid>$(RuntimeIdentifier.Replace('osx', 'macos'))</NativeRid>
+  </PropertyGroup>
+
+  <!-- Keep only this platform's native libraries in the bundle. -->
+  <Target Name="PruneForeignNatives" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <_Foreign Include="@(ResolvedFileToPublish)" Condition="$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/')) And !$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/$(NativeRid)/'))" />
+      <ResolvedFileToPublish Remove="@(_Foreign)" />
+    </ItemGroup>
+  </Target>
+</Project>
