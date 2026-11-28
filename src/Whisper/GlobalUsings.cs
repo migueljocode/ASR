@@ -5,3 +5,5 @@ global using System.Text;
 global using System.Threading.Channels;
 global using NAudio.Wave;
 global using Whisper.net;
+global using Whisper.net.LibraryLoader;
+global using Whisper.net.Logger;

@@ -29,6 +29,7 @@ The installers use a per-user install location and add it to the user PATH if ne
 - Plain-text (`.txt`) and SubRip subtitle (`.srt`) output.
 - Live microphone transcription on Linux using the default ALSA/PipeWire device.
 - Six downloadable models, from `tiny` to `large`, with resumable downloads.
+- Interactive model pickers and clear live progress for downloads and transcription.
 - Single-file, self-contained release builds for Linux x64, Windows x64, macOS x64, and macOS ARM64.
 
 ## Manual install
@@ -48,6 +49,8 @@ dotnet build Whisper.slnx --configuration Release
 The build output is under `src/Whisper/bin/Release/`. FFmpeg and, for Linux microphone capture, `arecord` are external runtime dependencies.
 
 ## Quick start
+
+Launch `Whisper` with no arguments to open the full-screen interactive dashboard. Use the arrow keys to navigate, Enter to select, Tab or 1–3 to change pages, and Q or Esc to exit. The layout and menus adapt when the terminal is resized.
 
 Download a model first:
 
@@ -71,7 +74,7 @@ Whisper recording.wav subtitles.srt
 Choose a model and language:
 
 ```sh
-Whisper recording.mp3 transcript.srt --model medium --language fa
+Whisper recording.mp3 transcript.srt -m medium --language fa
 ```
 
 Transcribe from the default Linux microphone and save text:
@@ -99,10 +102,12 @@ Whisper --help
 | `-i`, `--input <path>` | Specify the input file by option instead of positionally. |
 | `[output]` | Optional output path. `.srt` produces SubRip subtitles; other extensions produce plain text. Without a path, text is printed to the terminal only. |
 | `--mic` | Transcribe live from the default Linux microphone. Optional output must be a text file. |
-| `-p`, `--model <name>` | Prefer an installed model: `tiny`, `base`, `small`, `medium`, `turbo`, or `large`. |
+| `-m`, `-p`, `--model <name>` | Prefer an installed model: `tiny`, `base`, `small`, `medium`, `turbo`, or `large`. |
 | `-l`, `--language <code>` | Recognition language code. Defaults to `auto`; examples include `en`, `fa`, and `tr`. |
 | `--download [model]` | Download a named model, or interactively select one if omitted. |
 | `--uninstall [model]` | Remove a named model, or interactively select one if omitted. |
+| `-d`, `--device <name>` | Compute device: `auto` (GPU when available, default), `cpu`, or `gpu`. |
+| `--benchmark` | Transcribe the input on the CPU and the GPU, then compare timings. |
 | `-h`, `--help` | Display command help. |
 
 If a requested model is not installed, the application reports that and uses an available model. When several models are installed, it may prompt for a selection. File transcription defaults to `large` when available; microphone transcription defaults to `turbo`. If neither recommended model is installed, an available model is selected.

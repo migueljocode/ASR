@@ -24,8 +24,10 @@
 
   <ItemGroup>
     <PackageReference Include="NAudio.Core" Version="2.2.1" />
+    <PackageReference Include="Spectre.Console" Version="0.50.0" />
     <PackageReference Include="Whisper.net" Version="1.8.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.8.1" />
+    <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.8.1" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -36,7 +38,7 @@
   <!-- Keep only this platform's native libraries in the bundle. -->
   <Target Name="PruneForeignNatives" AfterTargets="ComputeResolvedFilesToPublishList">
     <ItemGroup>
-      <_Foreign Include="@(ResolvedFileToPublish)" Condition="$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/')) And !$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/$(NativeRid)/'))" />
+      <_Foreign Include="@(ResolvedFileToPublish)" Condition="$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/')) And !$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/$(NativeRid)/')) And !$([System.String]::new('%(RelativePath)').Replace('\', '/').StartsWith('runtimes/vulkan/$(RuntimeIdentifier)/'))" />
       <ResolvedFileToPublish Remove="@(_Foreign)" />
     </ItemGroup>
   </Target>
