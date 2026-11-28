@@ -57,4 +57,20 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          name: Whisper ${{ github.ref_name }}
+          body: |
+            ## Whisper 1.0.0
+
+            Whisper is a private, offline speech-to-text app powered by Whisper. Transcribe audio files to text or subtitles, or capture live speech from a Linux microphone.
+
+            ### Highlights
+            - Full-screen, resize-aware terminal dashboard with themed pages and keyboard navigation.
+            - Interactive model library with resumable downloads and live progress.
+            - CPU and Vulkan GPU selection, plus a benchmark mode for comparing performance.
+            - Multiple recognition languages, plain-text and SRT output, and live microphone transcription.
+
+            ### Downloads
+            Choose the archive for your platform: `linux-x64`, `win-x64`, `osx-x64`, or `osx-arm64`. Download a Whisper model separately after installation.
+
+            FFmpeg is required for audio files. Linux microphone capture requires `arecord`.
           files: release-assets/*.zip
