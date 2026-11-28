@@ -1,33 +1,29 @@
-using Spectre.Console;
-
 enum Capture { Idle, Listening, Recording }
 
-// Single animated status line pinned below the output: capture state | background work.
+// Status bar pinned to the last terminal row; output scrolls in the region above it.
 static class Status
 {
     static readonly string[] Spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    const string Bg = "\e[48;2;12;60;90m", Reset = "\e[0m";
     static readonly object Gate = new();
     static Thread? _thread;
     static volatile bool _running;
     static Capture _capture;
     static string? _work;
-    static int _frame;
-    static readonly StringWriter Buffer = new();
-    static readonly IAnsiConsole Renderer = AnsiConsole.Create(new AnsiConsoleSettings
-    {
-        Ansi = AnsiSupport.Yes,
-        ColorSystem = ColorSystemSupport.EightBit,
-        Interactive = InteractionSupport.No,
-        Out = new AnsiConsoleOutput(Buffer)
-    });
+    static int _frame, _height;
 
     // Own thread, so the animation keeps running while the thread pool is busy with inference.
     public static void Start()
     {
         if (!Ui.Enabled || _thread is not null) return;
-        Console.Write("\e[?25l");
+        lock (Gate)
+        {
+            Console.Write("\e[?25l");
+            _thread = new Thread(Animate) { IsBackground = true, Name = "status" };
+            Reserve();
+        }
+
         _running = true;
-        _thread = new Thread(Animate) { IsBackground = true, Name = "status" };
         _thread.Start();
     }
 
@@ -38,9 +34,8 @@ static class Status
         thread.Join();
         lock (Gate)
         {
-            Clear();
+            Console.Write($"\e7\e[{_height};1H\e[2K\e[r\e8\e[?25h");
             _thread = null;
-            Console.Write("\e[?25h");
         }
     }
 
@@ -63,28 +58,39 @@ static class Status
 
     public static void Print(Action write)
     {
-        lock (Gate)
-        {
-            Clear();
-            write();
-            Draw();
-        }
+        lock (Gate) write();
     }
 
-    static void Clear()
+    // Limits scrolling to every row but the last, keeping the cursor where it was.
+    static void Reserve()
     {
-        if (_thread is not null) Console.Write("\r\e[2K");
+        _height = Console.WindowHeight;
+        Console.Write($"\e7\e[1;{_height - 1}r\e8");
+        if (Console.CursorTop >= _height - 1) Console.SetCursorPosition(0, _height - 2);
     }
 
     static void Draw()
     {
         if (_thread is null) return;
-        List<string> parts = [];
-        if (_capture == Capture.Recording) parts.Add("[bold red]● Recording[/]");
-        else if (_capture == Capture.Listening) parts.Add($"[cyan]{(_frame / 7 % 2 == 0 ? "●" : "○")} Listening[/]");
-        if (_work is not null) parts.Add($"{Ui.Yellow(Spinner[_frame % Spinner.Length])} {Ui.Yellow(_work)}");
-        Buffer.GetStringBuilder().Clear();
-        Renderer.Markup(string.Join("[grey]  │  [/]", parts));
-        Console.Write($"\r{Ui.Indent}{Buffer}\e[K");
+        if (_height != Console.WindowHeight) Reserve();
+
+        List<(string Text, string Color)> parts = [(" ◆ Whisper", "\e[96m")];
+        if (_capture == Capture.Recording) parts.Add(("  ● Recording", "\e[91m"));
+        else if (_capture == Capture.Listening) parts.Add(($"  {(_frame / 7 % 2 == 0 ? "●" : "○")} Listening", "\e[96m"));
+        if (_work is not null) parts.Add(($"  {Spinner[_frame % Spinner.Length]} {_work}", "\e[93m"));
+        parts.Add(("  ·  Esc stop", "\e[37m"));
+
+        var width = Console.WindowWidth;
+        var text = new StringBuilder(Bg);
+        var used = 0;
+        foreach (var (part, color) in parts)
+        {
+            var piece = part[..Math.Min(part.Length, Math.Max(0, width - used))];
+            text.Append(color).Append(piece);
+            used += piece.Length;
+        }
+
+        text.Append(' ', Math.Max(0, width - used)).Append(Reset);
+        Console.Write($"\e7\e[{_height};1H{text}\e8");
     }
 }

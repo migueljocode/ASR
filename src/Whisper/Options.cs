@@ -6,6 +6,8 @@ record Options(string? Input, string? Output, bool Mic, bool Help, Precision? Le
 {
     public Format Format => ".srt".Equals(Path.GetExtension(Output), StringComparison.OrdinalIgnoreCase) ? Format.Srt : Format.Txt;
 
+    public const string Languages = "en, fa, tr, ru, ar, de, fr, es, zh, ja";
+
     public static string[] SplitLanguages(string language) =>
         language.Split(['+', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(code => code.ToLowerInvariant())
@@ -26,7 +28,14 @@ record Options(string? Input, string? Output, bool Mic, bool Help, Precision? Le
             switch (args[i])
             {
                 case "-h" or "--help": help = true; break;
-                case "--mic": mic = true; break;
+                case "--mic":
+                    mic = true;
+                    if (i + 1 < args.Length && int.TryParse(args[i + 1], out var number) && number > 0)
+                    {
+                        micDevice = number;
+                        i++;
+                    }
+                    break;
                 case "-i" or "--input":
                     if (!TryGetValue(args, ref i, out input!))
                         return Invalid("Missing file after -i.");
@@ -56,9 +65,12 @@ record Options(string? Input, string? Output, bool Mic, bool Help, Precision? Le
                     break;
                 case "--benchmark": benchmark = true; break;
                 case "--mic-device":
-                    if (!TryGetValue(args, ref i, out var micText) || !int.TryParse(micText, out var micNumber) || micNumber < 1)
-                        return Invalid("Use --mic-device with a microphone number, starting at 1.");
-                    micDevice = micNumber;
+                    micDevice = 0;
+                    if (i + 1 < args.Length && int.TryParse(args[i + 1], out var micNumber) && micNumber > 0)
+                    {
+                        micDevice = micNumber;
+                        i++;
+                    }
                     break;
                 case "-d" or "--device":
                     if (!TryGetValue(args, ref i, out var deviceName))
@@ -67,8 +79,9 @@ record Options(string? Input, string? Output, bool Mic, bool Help, Precision? Le
                         return Invalid($"Unknown device '{deviceName}'. Use auto, cpu, or gpu.");
                     break;
                 case "-l" or "--language":
-                    if (!TryGetValue(args, ref i, out language))
-                        return Invalid("Missing language after -l.");
+                    if (i + 1 >= args.Length || args[i + 1].StartsWith('-'))
+                        return Invalid($"Missing language after -l. Common codes: {Languages}.");
+                    language = args[++i];
                     break;
                 case var option when option.StartsWith('-') && option.Length > 1:
                     return Invalid($"Unknown option '{option}'.");
@@ -81,7 +94,7 @@ record Options(string? Input, string? Output, bool Mic, bool Help, Precision? Le
         if (benchmark && (mic || download || uninstall)) return Invalid("--benchmark cannot be combined with --mic, --download or --uninstall.");
         if (uninstall && (download || mic || input is not null || files.Count > 0)) return Invalid("--uninstall cannot be combined with other options.");
 
-        if (micDevice is not null && !mic) return Invalid("--mic-device needs --mic.");
+        if (micDevice is > 0 && !mic) return Invalid("--mic-device needs --mic.");
 
         var languages = SplitLanguages(language);
         if (languages.Length == 0 || languages.Length > 1 && languages.Contains("auto"))

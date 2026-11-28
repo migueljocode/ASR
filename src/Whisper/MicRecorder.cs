@@ -13,7 +13,9 @@ static class MicRecorder
         using var arecord = Proc.Start("arecord", "-D", device, "-q", "-t", "raw", "-f", "S16_LE", "-r", Wav.Rate.ToString(), "-c", "1");
         var capture = CaptureAsync(arecord.StandardOutput.BaseStream, channel.Writer);
 
+        Ui.Blank();
         Ui.Info("Listening... " + Ui.Bold("Enter") + " clears the buffer, " + Ui.Bold("Esc") + " stops.");
+        Ui.Blank();
         Status.Mode(Capture.Listening);
         using var stop = Cancellation.Token.Register(() =>
         {

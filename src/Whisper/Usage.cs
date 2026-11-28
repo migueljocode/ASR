@@ -4,6 +4,7 @@ static class Usage
 {
     public static void Write()
     {
+        Ui.Banner();
         var commands = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Grey)
@@ -26,7 +27,7 @@ static class Usage
         options.AddRow("[cyan]-m, -p, --model <name>[/]", "Prefer tiny, base, small, medium, turbo, or large.");
         options.AddRow("[cyan]-l, --language <code>[/]", "Recognition language; defaults to auto (for example: en, fa, tr, or fa+en to allow only those).");
         options.AddRow("[cyan]-d, --device <name>[/]", "Run on auto (GPU when available), cpu, or gpu.");
-        options.AddRow("[cyan]--mic-device <number>[/]", "Microphone number for --mic; asks when omitted and several exist.");
+        options.AddRow("[cyan]--mic-device [[number]][/]", "Microphone number for --mic; lists the microphones when omitted.");
         options.AddRow("[cyan]-h, --help[/]", "Show this help.");
         options.AddRow("[grey][[output]][/]", "Optional .txt or .srt path; omit to print transcription only.");
 
@@ -44,14 +45,14 @@ static class Usage
                     new Text(""),
                     commands,
                     new Text(""),
-                    new Markup("[bold]Options[/]"),
+                    new Markup("[#5fe0d0]Options[/]"),
                     options,
                     new Text(""),
-                    new Markup("[bold]Examples[/]"),
+                    new Markup("[#5fe0d0]Examples[/]"),
                     examples))
-            .Header("[bold #c4b5fd] Whisper [/]")
+            .Header("[#5fe0d0] HELP [/]")
             .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Grey)
+            .BorderColor(Color.DeepSkyBlue1)
             .Padding(1, 0));
     }
 }

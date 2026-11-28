@@ -39,17 +39,18 @@ static class ModelManager
         }
     }
 
-    public static void Uninstall(ModelInfo model)
+    public static bool Uninstall(ModelInfo model)
     {
         if (!model.Installed && !model.HasPartial)
         {
             Ui.Warn($"Model '{model.Level}' is not installed.");
-            return;
+            return false;
         }
 
         File.Delete(model.LocalPath);
         File.Delete(model.PartialPath);
         Ui.Info($"Removed {Ui.Bold(model.Level.ToString())}");
+        return true;
     }
 
     // Downloads into a stable .part file and continues from its length when restarted.

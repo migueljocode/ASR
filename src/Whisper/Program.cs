@@ -7,6 +7,12 @@ var options = Options.Parse(args);
 if (args.Length == 0 && Ui.Interactive)
 {
     var action = await Dashboard.RunAsync();
+    if (action != DashboardAction.Exit)
+    {
+        Screen.Enter();
+        Ui.NewPage();
+    }
+
     switch (action)
     {
         case DashboardAction.Transcribe:
@@ -52,34 +58,59 @@ if (options.Error is { } error)
 
 if (options.Help || args.Length == 0)
 {
+    Screen.Enter();
     Usage.Write();
+    await Screen.HoldAsync();
+    Screen.Leave();
     return 0;
 }
 
-if (options.Download || options.Uninstall || !Ui.Interactive) Ui.Banner();
+if (options.MicDevice == 0)
+{
+    Screen.Enter();
+    Ui.NewPage();
+    MicPicker.Show();
+    await Screen.HoldAsync();
+    Screen.Leave();
+    return 0;
+}
+
+if (options.Download || options.Uninstall) Screen.Enter();
+if (Screen.Active) Ui.NewPage();
+else if (options.Download || options.Uninstall || !Ui.Interactive) Ui.Banner();
 
 if (options.Download)
 {
     var choice = options.Level is { } level ? Models.Get(level) : await ModelPicker.ChooseForDownloadAsync();
+    string? recap = null;
     if (choice is not null)
     {
         Cancellation.Watch();
         try
         {
             await ModelManager.DownloadAsync(choice);
+            recap = $"Model {Ui.Bold(choice.Level.ToString())} is ready";
         }
         catch (OperationCanceledException)
         {
             Ui.Warn("Download stopped. Run it again to resume.");
+            recap = "Download stopped. Run it again to resume.";
         }
     }
+
+    var downloadScreen = Screen.Active;
+    Screen.Leave();
+    if (downloadScreen && recap is not null) Ui.Recap(recap);
     return 0;
 }
 
 if (options.Uninstall)
 {
     var target = options.Level is { } level ? Models.Get(level) : ModelPicker.ChooseForUninstall();
-    if (target is not null) ModelManager.Uninstall(target);
+    var removed = target is not null && ModelManager.Uninstall(target);
+    var uninstallScreen = Screen.Active;
+    Screen.Leave();
+    if (uninstallScreen) Ui.Recap(removed ? $"Removed {Ui.Bold(target!.Level.ToString())}" : "No model was removed.");
     return 0;
 }
 
@@ -97,14 +128,23 @@ if (options is { Mic: true, Format: Format.Srt })
 
 Screen.Enter();
 Ui.NewPage();
-var mic = options.Mic ? MicPicker.Pick(options.MicDevice) : null;
+var (mic, micCancelled) = options.Mic ? MicPicker.Pick(options.MicDevice) : (null, false);
+if (micCancelled) return 0;
 if (options.Mic && mic is null) return 1;
 var selection = ModelPicker.FindInstalled(options.Level, options.Mic);
 if (selection.Cancelled) return 0;
 if (selection.Model is not { } model) return 1;
 Ui.NewPage();
-Ui.Info($"Model: {Ui.Bold(model.Level.ToString())} {Ui.Dim(model.Note)}");
-if (mic is { } picked) Ui.Info($"Microphone: {Ui.Bold(picked.Name)}");
+var languageLabel = options.Language.Equals("auto", StringComparison.OrdinalIgnoreCase) ? "all" : string.Join("+", Options.SplitLanguages(options.Language));
+List<(string, string)> session =
+[
+    ("Model", $"{Ui.Bold(model.Level.ToString())} {Ui.Dim(model.Note)}"),
+    ("Language", Ui.Escape(languageLabel == "all" ? "all (auto-detect)" : languageLabel))
+];
+if (mic is { } picked) session.Add(("Microphone", Ui.Escape(picked.Name)));
+if (options.Input is not null) session.Add(("Input", Ui.Escape(options.Input)));
+if (options.Output is not null) session.Add(("Output", Ui.Escape(options.Output)));
+Ui.Card("SESSION", session);
 
 if (options.Benchmark)
 {
@@ -123,8 +163,12 @@ try
     Status.Work($"Loading {model.Level} model…");
     await using var transcriber = new Transcriber(model.LocalPath, options.Language, options.Mic, options.Device != ComputeDevice.Cpu);
     var compute = transcriber.Compute;
-    Ui.Info("Compute: " + Ui.Bold($"{compute.Label} · {compute.Device}") + " " + Ui.Dim($"via {compute.Library}"));
-    Ui.Info("CPU: " + Ui.Bold(compute.Cpu) + " " + Ui.Dim($"· {compute.Threads} threads"));
+    Ui.Card("COMPUTE",
+    [
+        ("Device", Ui.Escape($"{compute.Label} · {compute.Device}")),
+        ("Runtime", Ui.Escape(compute.Library)),
+        ("CPU", Ui.Escape($"{compute.Cpu} · {compute.Threads} threads"))
+    ]);
     if (!compute.UsesGpu && options.Device != ComputeDevice.Cpu)
     {
         Ui.Warn($"No usable GPU backend was found; running on the CPU (loaded runtime: {compute.Library}).");
@@ -149,8 +193,8 @@ try
         await using (audio)
         {
             Status.Work(options.Mic
-                ? $"Transcribing on {compute.Label}"
-                : $"Transcribing {++chunk}/{chunks.Count} on {compute.Label}");
+                ? $"Transcribing {languageLabel} on {compute.Label}"
+                : $"Transcribing {++chunk}/{chunks.Count} · {languageLabel} on {compute.Label}");
             using var chunkStop = CancellationTokenSource.CreateLinkedTokenSource(stop, Cancellation.Flush);
             try
             {
@@ -185,8 +229,10 @@ finally
 void Summary()
 {
     Console.WriteLine();
-    Ui.Info($"Done: {Ui.Bold(index.ToString())} segment(s)");
-    if (options.Output is { } saved) Ui.Info($"Saved to {Ui.Bold(saved)}");
+    List<(string, string)> rows = [("Segments", index.ToString())];
+    if (options.Output is not null) rows.Add(("Saved to", Ui.Escape(options.Output)));
+    rows.Add(("Status", Ui.Green("All done.")));
+    Ui.Card("SUMMARY", rows);
 }
 
 if (Screen.Active && !options.Mic && !Cancellation.Abort.IsCancellationRequested)

@@ -3,7 +3,7 @@ sealed class Transcriber : IAsyncDisposable
     readonly WhisperFactory _factory;
     readonly WhisperProcessor _processor;
     readonly Dictionary<string, WhisperProcessor> _restricted = new(StringComparer.OrdinalIgnoreCase);
-    static readonly int Threads = Math.Clamp(Environment.ProcessorCount - 1, 1, 8);
+    static readonly int Threads = Math.Clamp(Environment.ProcessorCount, 1, 8);
 
     public ComputeInfo Compute { get; }
 

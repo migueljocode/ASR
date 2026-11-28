@@ -13,6 +13,23 @@ static class Screen
         AppDomain.CurrentDomain.ProcessExit += (_, _) => Leave();
     }
 
+    // Keeps the full-screen view until Enter, Esc or Ctrl+X.
+    public static async Task HoldAsync()
+    {
+        if (!_active) return;
+        Console.WriteLine();
+        Cancellation.Watch();
+        Cancellation.Finish();
+        Ui.Info("Press " + Ui.Bold("Enter") + ", " + Ui.Bold("Esc") + " or " + Ui.Bold("Ctrl+X") + " to exit.");
+        try
+        {
+            await Task.Delay(Timeout.Infinite, Cancellation.Abort);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
     public static void Leave()
     {
         if (!_active) return;

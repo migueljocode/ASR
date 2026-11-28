@@ -19,8 +19,24 @@ static class Ui
 
     public static void Banner()
     {
-        AnsiConsole.Write(new Rule("[bold #c4b5fd]WHISPER[/]  [grey]OFFLINE SPEECH RECOGNITION[/]").RuleStyle("grey"));
+        if (Enabled && Console.WindowWidth > Logo.Width + 2)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.Write(Logo.Render());
+            AnsiConsole.Write(Align.Center(new Markup("[#10b981]◆[/] [grey]Offline Speech Recognition[/]")));
+        }
+        else
+            AnsiConsole.Write(new Rule("[bold #c4b5fd]WHISPER[/]  [grey]OFFLINE SPEECH RECOGNITION[/]").RuleStyle("grey"));
         AnsiConsole.WriteLine();
+    }
+
+    // Titled panel with aligned key/value rows (values are markup).
+    public static void Card(string title, IEnumerable<(string Key, string Value)> rows)
+    {
+        var grid = new Grid().AddColumn(new GridColumn().NoWrap().PadRight(3)).AddColumn();
+        foreach (var (key, value) in rows) grid.AddRow($"[cyan]{key}[/]", value);
+        var panel = new Panel(grid) { Width = ContentWidth }.Header($"[#5fe0d0] {title} [/]").Border(BoxBorder.Rounded).BorderColor(Color.DeepSkyBlue1);
+        Status.Print(() => AnsiConsole.Write(Align.Center(panel)));
     }
 
     // Compact recap printed on the normal screen after full-screen mode ends.
@@ -33,6 +49,8 @@ static class Ui
         Console.Write("\e[2J\e[H");
         Banner();
     }
+
+    public static void Blank() => Status.Print(() => Console.WriteLine());
 
     public static void Info(string text) =>
         Status.Print(() => AnsiConsole.MarkupLine($"{Indent}[cyan]›[/] {text}"));
